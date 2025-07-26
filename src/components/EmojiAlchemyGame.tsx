@@ -437,10 +437,10 @@ const EmojiAlchemyGame = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold bg-gradient-magic bg-clip-text text-transparent mb-4">
-            🧪 Emoji Alchemy 🧪
+            🧪 Emoji Game 🧪
           </h1>
           <p className="text-foreground/80 text-lg">
-            Match 3+ emojis to create magical reactions!
+            Match 3+ emojis to trigger emotional reactions!
           </p>
         </div>
 
