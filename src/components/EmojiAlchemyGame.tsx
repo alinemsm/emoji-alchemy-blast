@@ -65,6 +65,10 @@ interface GameState {
   moves: number;
   scorePopups: ScorePopup[];
   lastScoreGain: number;
+  timeRemaining: number;
+  isGameOver: boolean;
+  finalScore: number;
+  gameStarted: boolean;
 }
 
 // Audio System Class for Arcade-Style Sounds
@@ -208,6 +212,22 @@ class AudioSystem {
     }
   }
 
+  playTimerWarning() {
+    // Urgent warning sound for low time
+    this.createTone(800, 0.2, 0.15, 'square');
+    setTimeout(() => this.createTone(600, 0.2, 0.15, 'square'), 200);
+  }
+
+  playGameOverSound() {
+    // Descending game over sound
+    const frequencies = [440, 370, 311, 261]; // A4 to C4
+    frequencies.forEach((freq, index) => {
+      setTimeout(() => {
+        this.createTone(freq, 0.8, 0.1, 'triangle');
+      }, index * 300);
+    });
+  }
+
   toggleMute() {
     this.isMuted = !this.isMuted;
     return this.isMuted;
@@ -229,7 +249,11 @@ const EmojiAlchemyGame = () => {
     chainCount: 0,
     moves: 0,
     scorePopups: [],
-    lastScoreGain: 0
+    lastScoreGain: 0,
+    timeRemaining: 120, // 2 minutes
+    isGameOver: false,
+    finalScore: 0,
+    gameStarted: false
   });
 
   // Initialize random board
@@ -580,7 +604,12 @@ const EmojiAlchemyGame = () => {
 
   // Handle tile selection and swapping
   const handleTileClick = useCallback((row: number, col: number) => {
-    if (gameState.isProcessing) return;
+    if (gameState.isProcessing || gameState.isGameOver) return;
+    
+    // Start the game on first move
+    if (!gameState.gameStarted) {
+      setGameState(prev => ({ ...prev, gameStarted: true }));
+    }
     
     const currentPos = { row, col };
     
@@ -652,7 +681,11 @@ const EmojiAlchemyGame = () => {
       chainCount: 0,
       moves: 0,
       scorePopups: [],
-      lastScoreGain: 0
+      lastScoreGain: 0,
+      timeRemaining: 120, // 2 minutes
+      isGameOver: false,
+      finalScore: 0,
+      gameStarted: false
     });
   }, [initializeBoard]);
 
@@ -683,6 +716,55 @@ const EmojiAlchemyGame = () => {
       document.removeEventListener('click', handleFirstInteraction);
     };
   }, [initializeBoard, initializeAudio]);
+
+  // Timer countdown logic
+  useEffect(() => {
+    if (!gameState.gameStarted || gameState.isGameOver || gameState.timeRemaining <= 0) return;
+
+    const timer = setInterval(() => {
+      setGameState(prev => {
+        const newTime = prev.timeRemaining - 1;
+        
+        // Play warning sounds
+        if (newTime === 30 || newTime === 10 || newTime === 5) {
+          audioSystem.current.playTimerWarning();
+        }
+        
+        // Game over when time reaches 0
+        if (newTime <= 0) {
+          audioSystem.current.playGameOverSound();
+          const efficiency = prev.moves > 0 ? Math.round(prev.score / prev.moves) : prev.score;
+          const finalScore = prev.score + efficiency; // Bonus for efficiency
+          
+          return {
+            ...prev,
+            timeRemaining: 0,
+            isGameOver: true,
+            finalScore,
+            isProcessing: false
+          };
+        }
+        
+        return { ...prev, timeRemaining: newTime };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [gameState.gameStarted, gameState.isGameOver, gameState.timeRemaining]);
+
+  // Format time display
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Get timer color based on remaining time
+  const getTimerColor = (): string => {
+    if (gameState.timeRemaining <= 10) return 'text-destructive';
+    if (gameState.timeRemaining <= 30) return 'text-accent';
+    return 'text-secondary';
+  };
 
   const getTileClassName = (tile: Tile) => {
     const baseClasses = "w-12 h-12 flex items-center justify-center text-2xl cursor-pointer transition-all duration-300 rounded-lg border-2 border-game-tile";
@@ -739,8 +821,8 @@ const EmojiAlchemyGame = () => {
           </p>
         </div>
 
-        {/* Game Stats - Now 3 columns instead of 4 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Game Stats - Now 4 columns with Timer */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-card/90 backdrop-blur-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-center">Score</CardTitle>
@@ -748,6 +830,17 @@ const EmojiAlchemyGame = () => {
             <CardContent className="pt-0">
               <div className="text-3xl font-bold bg-gradient-score bg-clip-text text-transparent text-center">
                 {gameState.score.toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/90 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-center">Time</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className={`text-3xl font-bold text-center ${getTimerColor()}`}>
+                {formatTime(gameState.timeRemaining)}
               </div>
             </CardContent>
           </Card>
@@ -826,6 +919,56 @@ const EmojiAlchemyGame = () => {
             </div>
           )}
         </Card>
+
+        {/* Game Over Overlay */}
+        {gameState.isGameOver && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <Card className="bg-card border-primary border-2 shadow-2xl animate-bounce-in">
+              <CardHeader className="text-center">
+                <CardTitle className="text-3xl text-primary mb-2">⏰ Time's Up!</CardTitle>
+                <p className="text-foreground/80">Your emotional reactions have ended</p>
+              </CardHeader>
+              <CardContent className="text-center space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-2xl font-bold text-primary">{gameState.score.toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground">Base Score</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-accent">+{gameState.finalScore - gameState.score}</div>
+                    <div className="text-sm text-muted-foreground">Efficiency Bonus</div>
+                  </div>
+                </div>
+                
+                <div className="border-t border-border pt-4">
+                  <div className="text-4xl font-bold bg-gradient-score bg-clip-text text-transparent">
+                    {gameState.finalScore.toLocaleString()}
+                  </div>
+                  <div className="text-lg text-foreground/80">Final Score</div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                  <div>
+                    <div className="font-semibold">{gameState.moves}</div>
+                    <div>Total Moves</div>
+                  </div>
+                  <div>
+                    <div className="font-semibold">{gameState.moves > 0 ? Math.round(gameState.score / gameState.moves) : 0}</div>
+                    <div>Points/Move</div>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={resetGame} 
+                  className="w-full"
+                  size="lg"
+                >
+                  Play Again 🎮
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Game Rules */}
         <Card className="bg-card/90 backdrop-blur-sm">
