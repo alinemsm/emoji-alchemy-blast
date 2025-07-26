@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Volume2, VolumeX } from 'lucide-react';
 
 // Game Configuration - Easy to tweak probabilities and settings
 const BOARD_SIZE = 8;
@@ -53,7 +54,128 @@ interface GameState {
   moves: number;
 }
 
+// Audio System Class for Arcade-Style Sounds
+class AudioSystem {
+  private audioContext: AudioContext | null = null;
+  private backgroundMusic: AudioBufferSourceNode | null = null;
+  private isMuted: boolean = false;
+  private isInitialized: boolean = false;
+
+  async initialize() {
+    if (this.isInitialized) return;
+    
+    try {
+      this.audioContext = new AudioContext();
+      this.isInitialized = true;
+      this.startBackgroundMusic();
+    } catch (error) {
+      console.log('Audio not supported:', error);
+    }
+  }
+
+  private createTone(frequency: number, duration: number, volume: number = 0.1, type: OscillatorType = 'sine') {
+    if (!this.audioContext || this.isMuted) return;
+
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+    oscillator.type = type;
+    
+    gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+    
+    oscillator.start(this.audioContext.currentTime);
+    oscillator.stop(this.audioContext.currentTime + duration);
+  }
+
+  private startBackgroundMusic() {
+    if (!this.audioContext || this.isMuted) return;
+
+    // Create a simple procedural background loop
+    const playMusicLoop = () => {
+      if (this.isMuted || !this.audioContext) return;
+
+      // Chord progression for retro arcade feel
+      const chords = [
+        [261.63, 329.63, 392.00], // C major
+        [246.94, 311.13, 369.99], // B minor  
+        [220.00, 277.18, 329.63], // A minor
+        [196.00, 246.94, 293.66], // G major
+      ];
+
+      chords.forEach((chord, index) => {
+        setTimeout(() => {
+          chord.forEach(freq => {
+            this.createTone(freq, 1.5, 0.03, 'triangle');
+          });
+        }, index * 2000);
+      });
+
+      // Loop every 8 seconds
+      setTimeout(playMusicLoop, 8000);
+    };
+
+    playMusicLoop();
+  }
+
+  playSwapSound() {
+    this.createTone(440, 0.1, 0.1, 'square');
+  }
+
+  playMatchSound(matchSize: number) {
+    // Higher pitch for bigger matches
+    const baseFreq = 523.25; // C5
+    const frequency = baseFreq + (matchSize - 3) * 100;
+    this.createTone(frequency, 0.3, 0.15, 'sine');
+    
+    // Add a second harmonic for richness
+    setTimeout(() => {
+      this.createTone(frequency * 1.5, 0.2, 0.08, 'sine');
+    }, 50);
+  }
+
+  playChainSound(chainCount: number) {
+    // Ascending notes for chains
+    const frequencies = [659.25, 783.99, 987.77, 1174.66]; // E5, G5, B5, D6
+    const freq = frequencies[Math.min(chainCount - 1, frequencies.length - 1)];
+    this.createTone(freq, 0.4, 0.12, 'square');
+  }
+
+  playBombSound() {
+    // Explosion sound effect
+    this.createTone(100, 0.1, 0.2, 'sawtooth');
+    setTimeout(() => this.createTone(80, 0.2, 0.15, 'sawtooth'), 50);
+    setTimeout(() => this.createTone(60, 0.3, 0.1, 'sawtooth'), 100);
+  }
+
+  playUpgradeSound() {
+    // Magical upgrade chime
+    const frequencies = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    frequencies.forEach((freq, index) => {
+      setTimeout(() => {
+        this.createTone(freq, 0.5, 0.08, 'sine');
+      }, index * 80);
+    });
+  }
+
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    return this.isMuted;
+  }
+
+  getMuteState() {
+    return this.isMuted;
+  }
+}
+
 const EmojiAlchemyGame = () => {
+  const audioSystem = useRef(new AudioSystem());
+  const [isMuted, setIsMuted] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     board: [],
     score: 0,
@@ -289,6 +411,12 @@ const EmojiAlchemyGame = () => {
       
       chainCount++;
       
+      // Play audio effects
+      audioSystem.current.playMatchSound(matches.length);
+      if (chainCount > 1) {
+        audioSystem.current.playChainSound(chainCount);
+      }
+      
       // Mark matched tiles
       matches.forEach(({ row, col }) => {
         currentBoard[row][col].state = 'matched';
@@ -299,6 +427,7 @@ const EmojiAlchemyGame = () => {
         const { newBoard, bonusScore } = applyAlchemy(matches, currentBoard);
         currentBoard = newBoard;
         totalScore += bonusScore;
+        audioSystem.current.playUpgradeSound();
       }
       
       // Calculate score with chain multiplier
@@ -312,6 +441,10 @@ const EmojiAlchemyGame = () => {
       });
       
       // Handle bomb explosions
+      const hasBombs = currentBoard.some(row => row.some(tile => tile.emoji === SPECIAL_EMOJIS.BOMB));
+      if (hasBombs) {
+        audioSystem.current.playBombSound();
+      }
       currentBoard = explodeBombs(currentBoard);
       
       // Apply gravity
@@ -363,6 +496,9 @@ const EmojiAlchemyGame = () => {
         (Math.abs(col - selectedCol) === 1 && row === selectedRow);
       
       if (isAdjacent) {
+        // Play swap sound
+        audioSystem.current.playSwapSound();
+        
         // Perform swap
         const newBoard = [...gameState.board];
         const temp = newBoard[row][col];
@@ -409,10 +545,33 @@ const EmojiAlchemyGame = () => {
     });
   }, [initializeBoard]);
 
-  // Initialize game on mount
+  // Handle mute toggle
+  const toggleMute = useCallback(() => {
+    const newMuteState = audioSystem.current.toggleMute();
+    setIsMuted(newMuteState);
+  }, []);
+
+  // Initialize audio on first user interaction
+  const initializeAudio = useCallback(() => {
+    audioSystem.current.initialize();
+  }, []);
+
+  // Initialize game on mount and set up audio
   useEffect(() => {
     setGameState(prev => ({ ...prev, board: initializeBoard() }));
-  }, [initializeBoard]);
+    
+    // Initialize audio on first click anywhere
+    const handleFirstInteraction = () => {
+      initializeAudio();
+      document.removeEventListener('click', handleFirstInteraction);
+    };
+    
+    document.addEventListener('click', handleFirstInteraction);
+    
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+    };
+  }, [initializeBoard, initializeAudio]);
 
   const getTileClassName = (tile: Tile) => {
     const baseClasses = "w-12 h-12 flex items-center justify-center text-2xl cursor-pointer transition-all duration-300 rounded-lg border-2 border-game-tile";
@@ -483,7 +642,7 @@ const EmojiAlchemyGame = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-center">Controls</CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="pt-0 space-y-2">
               <Button 
                 onClick={resetGame} 
                 variant="outline" 
@@ -492,6 +651,15 @@ const EmojiAlchemyGame = () => {
                 disabled={gameState.isProcessing}
               >
                 New Game
+              </Button>
+              <Button 
+                onClick={toggleMute}
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 mr-2" /> : <Volume2 className="w-4 h-4 mr-2" />}
+                {isMuted ? 'Unmute' : 'Mute'}
               </Button>
             </CardContent>
           </Card>
