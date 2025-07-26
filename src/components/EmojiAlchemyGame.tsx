@@ -45,6 +45,15 @@ interface Tile {
   id: string;
 }
 
+interface ScorePopup {
+  id: string;
+  points: number;
+  x: number;
+  y: number;
+  type: 'normal' | 'chain' | 'upgrade' | 'bomb';
+  timestamp: number;
+}
+
 interface GameState {
   board: Tile[][];
   score: number;
@@ -52,6 +61,8 @@ interface GameState {
   isProcessing: boolean;
   chainCount: number;
   moves: number;
+  scorePopups: ScorePopup[];
+  lastScoreGain: number;
 }
 
 // Audio System Class for Arcade-Style Sounds
@@ -173,6 +184,28 @@ class AudioSystem {
     });
   }
 
+  playMegaComboSound() {
+    // Epic sound for huge scores
+    const frequencies = [440, 554.37, 659.25, 830.61]; // A4, C#5, E5, G#5
+    frequencies.forEach((freq, index) => {
+      setTimeout(() => {
+        this.createTone(freq, 0.8, 0.12, 'sine');
+        this.createTone(freq * 2, 0.6, 0.06, 'triangle');
+      }, index * 120);
+    });
+  }
+
+  playScoreSound(points: number) {
+    // Different sounds based on score amount
+    if (points >= 100) {
+      this.playMegaComboSound();
+    } else if (points >= 50) {
+      this.createTone(880, 0.4, 0.1, 'triangle'); // High reward sound
+    } else {
+      this.createTone(440, 0.2, 0.08, 'sine'); // Standard score sound
+    }
+  }
+
   toggleMute() {
     this.isMuted = !this.isMuted;
     return this.isMuted;
@@ -192,7 +225,9 @@ const EmojiAlchemyGame = () => {
     selectedTile: null,
     isProcessing: false,
     chainCount: 0,
-    moves: 0
+    moves: 0,
+    scorePopups: [],
+    lastScoreGain: 0
   });
 
   // Initialize random board
@@ -406,6 +441,31 @@ const EmojiAlchemyGame = () => {
     return newBoard;
   }, [createTile]);
 
+  // Create score popup
+  const createScorePopup = useCallback((points: number, type: ScorePopup['type'] = 'normal'): ScorePopup => ({
+    id: Math.random().toString(36).substr(2, 9),
+    points,
+    x: Math.random() * 300 + 50, // Random position for visual variety
+    y: Math.random() * 100 + 200,
+    type,
+    timestamp: Date.now()
+  }), []);
+
+  // Clean up old score popups
+  const cleanupScorePopups = useCallback(() => {
+    const now = Date.now();
+    setGameState(prev => ({
+      ...prev,
+      scorePopups: prev.scorePopups.filter(popup => now - popup.timestamp < 2000)
+    }));
+  }, []);
+
+  // Auto cleanup score popups
+  useEffect(() => {
+    const interval = setInterval(cleanupScorePopups, 1000);
+    return () => clearInterval(interval);
+  }, [cleanupScorePopups]);
+
   // Process matches and cascades
   const processMatches = useCallback(async () => {
     setGameState(prev => ({ ...prev, isProcessing: true }));
@@ -443,7 +503,20 @@ const EmojiAlchemyGame = () => {
       // Calculate score with chain multiplier
       const baseScore = matches.length * POINTS_PER_TILE;
       const chainBonus = Math.floor(baseScore * (CHAIN_MULTIPLIER ** (chainCount - 1)));
-      totalScore += baseScore + chainBonus;
+      const totalRoundScore = baseScore + chainBonus;
+      totalScore += totalRoundScore;
+      
+      // Create score popup and play score sound
+      const popupType = chainCount > 1 ? 'chain' : 'normal';
+      const scorePopup = createScorePopup(totalRoundScore, popupType);
+      audioSystem.current.playScoreSound(totalRoundScore);
+      
+      // Add popup to game state
+      setGameState(prev => ({
+        ...prev,
+        scorePopups: [...prev.scorePopups, scorePopup],
+        lastScoreGain: totalRoundScore
+      }));
       
       // Clear matched tiles
       matches.forEach(({ row, col }) => {
@@ -551,7 +624,9 @@ const EmojiAlchemyGame = () => {
       selectedTile: null,
       isProcessing: false,
       chainCount: 0,
-      moves: 0
+      moves: 0,
+      scorePopups: [],
+      lastScoreGain: 0
     });
   }, [initializeBoard]);
 
@@ -675,8 +750,8 @@ const EmojiAlchemyGame = () => {
           </Card>
         </div>
 
-        {/* Game Board */}
-        <Card className="bg-game-board/90 backdrop-blur-sm p-6 mb-6">
+        {/* Game Board with Score Popups */}
+        <Card className="bg-game-board/90 backdrop-blur-sm p-6 mb-6 relative overflow-hidden">
           <div className="grid grid-cols-8 gap-2 max-w-md mx-auto">
             {gameState.board.map((row, rowIndex) =>
               row.map((tile, colIndex) => (
@@ -690,6 +765,36 @@ const EmojiAlchemyGame = () => {
               ))
             )}
           </div>
+
+          {/* Score Popups */}
+          {gameState.scorePopups.map((popup) => (
+            <div
+              key={popup.id}
+              className={`absolute pointer-events-none animate-bounce-in font-bold text-xl z-10 ${
+                popup.type === 'chain' ? 'text-secondary' :
+                popup.type === 'upgrade' ? 'text-accent' :
+                popup.type === 'bomb' ? 'text-destructive' : 
+                'text-primary'
+              }`}
+              style={{
+                left: `${popup.x}px`,
+                top: `${popup.y}px`,
+                animation: 'bounce-in 0.6s ease-out, fade-out 1s ease-out 1s forwards'
+              }}
+            >
+              +{popup.points}
+              {popup.type === 'chain' && ' ⚡'}
+              {popup.type === 'upgrade' && ' ✨'}
+              {popup.type === 'bomb' && ' 💥'}
+            </div>
+          ))}
+
+          {/* Last Score Display */}
+          {gameState.lastScoreGain > 0 && (
+            <div className="absolute top-4 right-4 bg-primary/20 backdrop-blur-sm rounded-lg px-3 py-1">
+              <span className="text-primary font-bold">+{gameState.lastScoreGain}</span>
+            </div>
+          )}
         </Card>
 
         {/* Game Rules */}
