@@ -52,6 +52,8 @@ interface ScorePopup {
   y: number;
   type: 'normal' | 'chain' | 'upgrade' | 'bomb';
   timestamp: number;
+  emotionName?: string;
+  matchSize?: number;
 }
 
 interface GameState {
@@ -271,6 +273,18 @@ const EmojiAlchemyGame = () => {
     return null;
   };
 
+  // Get human-readable emotion name
+  const getEmotionName = (family: string | null): string => {
+    if (!family) return 'Mixed';
+    switch (family) {
+      case 'HAPPY': return 'Happy';
+      case 'SAD': return 'Sad';
+      case 'ANGRY': return 'Angry';
+      case 'FOOD': return 'Tasty';
+      default: return 'Special';
+    }
+  };
+
   // Check if two emojis match (same family or wildcard)
   const emojisMatch = (emoji1: string, emoji2: string): boolean => {
     if (emoji1 === emoji2) return true;
@@ -442,13 +456,20 @@ const EmojiAlchemyGame = () => {
   }, [createTile]);
 
   // Create score popup
-  const createScorePopup = useCallback((points: number, type: ScorePopup['type'] = 'normal'): ScorePopup => ({
+  const createScorePopup = useCallback((
+    points: number, 
+    type: ScorePopup['type'] = 'normal',
+    emotionName?: string,
+    matchSize?: number
+  ): ScorePopup => ({
     id: Math.random().toString(36).substr(2, 9),
     points,
     x: Math.random() * 300 + 50, // Random position for visual variety
     y: Math.random() * 100 + 200,
     type,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    emotionName,
+    matchSize
   }), []);
 
   // Clean up old score popups
@@ -506,9 +527,14 @@ const EmojiAlchemyGame = () => {
       const totalRoundScore = baseScore + chainBonus;
       totalScore += totalRoundScore;
       
+      // Get the emotion name from the first matched emoji
+      const firstMatchEmoji = currentBoard[matches[0].row][matches[0].col].emoji;
+      const emotionFamily = getEmojiFamily(firstMatchEmoji);
+      const emotionName = getEmotionName(emotionFamily);
+      
       // Create score popup and play score sound
       const popupType = chainCount > 1 ? 'chain' : 'normal';
-      const scorePopup = createScorePopup(totalRoundScore, popupType);
+      const scorePopup = createScorePopup(totalRoundScore, popupType, emotionName, matches.length);
       audioSystem.current.playScoreSound(totalRoundScore);
       
       // Add popup to game state
@@ -770,7 +796,7 @@ const EmojiAlchemyGame = () => {
           {gameState.scorePopups.map((popup) => (
             <div
               key={popup.id}
-              className={`absolute pointer-events-none animate-bounce-in font-bold text-xl z-10 ${
+              className={`absolute pointer-events-none animate-bounce-in font-bold z-10 ${
                 popup.type === 'chain' ? 'text-secondary' :
                 popup.type === 'upgrade' ? 'text-accent' :
                 popup.type === 'bomb' ? 'text-destructive' : 
@@ -782,10 +808,15 @@ const EmojiAlchemyGame = () => {
                 animation: 'bounce-in 0.6s ease-out, fade-out 1s ease-out 1s forwards'
               }}
             >
-              +{popup.points}
-              {popup.type === 'chain' && ' ⚡'}
-              {popup.type === 'upgrade' && ' ✨'}
-              {popup.type === 'bomb' && ' 💥'}
+              <div className="text-center">
+                <div className="text-xl">+{popup.points}</div>
+                <div className="text-sm opacity-90 font-medium">
+                  {popup.emotionName && `${popup.emotionName} ${popup.matchSize || 3}`}
+                  {popup.type === 'chain' && ' ⚡'}
+                  {popup.type === 'upgrade' && ' ✨'}
+                  {popup.type === 'bomb' && ' 💥'}
+                </div>
+              </div>
             </div>
           ))}
 
