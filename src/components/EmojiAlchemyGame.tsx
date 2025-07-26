@@ -844,7 +844,7 @@ const EmojiAlchemyGame = () => {
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold mb-2">Alchemy Magic:</h4>
+                <h4 className="font-semibold mb-2">Emotional Magic:</h4>
                 <ul className="text-sm space-y-1 text-foreground/80">
                   <li>• 4+ matches upgrade emojis</li>
                   <li>• 😄→😊→😂→😍 (happiness chain)</li>
