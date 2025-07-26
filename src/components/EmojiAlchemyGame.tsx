@@ -704,6 +704,31 @@ const EmojiAlchemyGame = () => {
   return (
     <div className="min-h-screen bg-gradient-cosmic p-4 flex flex-col items-center">
       <div className="max-w-4xl w-full">
+        {/* Header Controls */}
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex gap-3">
+            <Button 
+              onClick={resetGame} 
+              variant="outline" 
+              size="sm"
+              disabled={gameState.isProcessing}
+            >
+              New Game
+            </Button>
+            <Button 
+              onClick={toggleMute}
+              variant="outline" 
+              size="sm"
+            >
+              {isMuted ? <VolumeX className="w-4 h-4 mr-2" /> : <Volume2 className="w-4 h-4 mr-2" />}
+              {isMuted ? 'Unmute' : 'Mute'}
+            </Button>
+          </div>
+          <div className="text-foreground/60 text-sm">
+            🕹️ Emoji Game
+          </div>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold bg-gradient-magic bg-clip-text text-transparent mb-4">
@@ -714,8 +739,8 @@ const EmojiAlchemyGame = () => {
           </p>
         </div>
 
-        {/* Game Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Game Stats - Now 3 columns instead of 4 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card className="bg-card/90 backdrop-blur-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-center">Score</CardTitle>
@@ -746,32 +771,6 @@ const EmojiAlchemyGame = () => {
               <div className="text-3xl font-bold text-secondary text-center">
                 {gameState.chainCount}x
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/90 backdrop-blur-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-center">Controls</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-2">
-              <Button 
-                onClick={resetGame} 
-                variant="outline" 
-                size="sm" 
-                className="w-full"
-                disabled={gameState.isProcessing}
-              >
-                New Game
-              </Button>
-              <Button 
-                onClick={toggleMute}
-                variant="outline" 
-                size="sm" 
-                className="w-full"
-              >
-                {isMuted ? <VolumeX className="w-4 h-4 mr-2" /> : <Volume2 className="w-4 h-4 mr-2" />}
-                {isMuted ? 'Unmute' : 'Mute'}
-              </Button>
             </CardContent>
           </Card>
         </div>
