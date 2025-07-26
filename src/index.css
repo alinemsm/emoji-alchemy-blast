@@ -2,57 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Emoji Alchemy Game Design System - Magical and Vibrant Theme */
+/* Solarized Dark Theme - Classic Terminal Aesthetic */
 
 @layer base {
   :root {
-    /* Game Background - Cosmic Purple */
-    --background: 258 47% 8%;
-    --foreground: 50 100% 90%;
+    /* Solarized Dark Base Colors */
+    --background: 193 100% 11%;        /* Base03 #002b36 */
+    --foreground: 186 8% 55%;          /* Base0 #839496 */
 
     /* Game Board Colors */
-    --game-board: 258 35% 12%;
-    --game-tile: 258 25% 18%;
-    --game-tile-hover: 258 30% 25%;
-    --game-tile-selected: 280 100% 70%;
-    --game-tile-matched: 50 100% 60%;
+    --game-board: 192 81% 14%;         /* Base02 #073642 */
+    --game-tile: 192 81% 14%;          /* Base02 #073642 */
+    --game-tile-hover: 194 25% 27%;    /* Base01 #586e75 */
+    --game-tile-selected: 237 45% 77%; /* Violet #6c71c4 */
+    --game-tile-matched: 68 100% 30%;  /* Green #859900 */
 
-    /* Magical Gradients */
-    --gradient-cosmic: linear-gradient(135deg, hsl(258 47% 8%), hsl(280 45% 15%));
-    --gradient-magic: linear-gradient(135deg, hsl(280 100% 70%), hsl(320 100% 80%));
-    --gradient-score: linear-gradient(135deg, hsl(50 100% 60%), hsl(45 100% 70%));
-    --gradient-explosion: radial-gradient(circle, hsl(50 100% 70%), hsl(30 100% 60%));
+    /* Solarized Accent Gradients */
+    --gradient-cosmic: linear-gradient(135deg, hsl(193 100% 11%), hsl(192 81% 14%));
+    --gradient-magic: linear-gradient(135deg, hsl(237 45% 77%), hsl(331 74% 52%));
+    --gradient-score: linear-gradient(135deg, hsl(45 100% 35%), hsl(18 89% 44%));
+    --gradient-explosion: radial-gradient(circle, hsl(45 100% 35%), hsl(18 89% 44%));
 
     /* Card and UI Elements */
-    --card: 258 35% 12%;
-    --card-foreground: 50 100% 90%;
+    --card: 192 81% 14%;               /* Base02 #073642 */
+    --card-foreground: 186 8% 55%;     /* Base0 #839496 */
 
-    --popover: 258 35% 12%;
-    --popover-foreground: 50 100% 90%;
+    --popover: 192 81% 14%;            /* Base02 #073642 */
+    --popover-foreground: 186 8% 55%;  /* Base0 #839496 */
 
-    /* Primary - Magical Purple */
-    --primary: 280 100% 70%;
-    --primary-foreground: 258 47% 8%;
+    /* Primary - Solarized Blue */
+    --primary: 205 69% 49%;            /* Blue #268bd2 */
+    --primary-foreground: 193 100% 11%; /* Base03 for contrast */
 
-    /* Secondary - Mystical Blue */
-    --secondary: 240 100% 75%;
-    --secondary-foreground: 258 47% 8%;
+    /* Secondary - Solarized Cyan */
+    --secondary: 175 59% 40%;          /* Cyan #2aa198 */
+    --secondary-foreground: 193 100% 11%; /* Base03 for contrast */
 
-    /* Muted - Subtle Purple */
-    --muted: 258 25% 18%;
-    --muted-foreground: 258 20% 70%;
+    /* Muted - Base01 */
+    --muted: 194 25% 27%;              /* Base01 #586e75 */
+    --muted-foreground: 186 13% 59%;   /* Base1 #93a1a1 */
 
-    /* Accent - Bright Gold */
-    --accent: 50 100% 60%;
-    --accent-foreground: 258 47% 8%;
+    /* Accent - Solarized Yellow */
+    --accent: 45 100% 35%;             /* Yellow #b58900 */
+    --accent-foreground: 193 100% 11%; /* Base03 for contrast */
 
-    /* Destructive - Fiery Red */
-    --destructive: 0 100% 65%;
-    --destructive-foreground: 50 100% 90%;
+    /* Destructive - Solarized Red */
+    --destructive: 1 79% 52%;          /* Red #dc322f */
+    --destructive-foreground: 193 100% 11%; /* Base03 for contrast */
 
-    --border: 258 25% 18%;
-    --input: 258 25% 18%;
-    --ring: 280 100% 70%;
+    --border: 194 25% 27%;             /* Base01 #586e75 */
+    --input: 194 25% 27%;              /* Base01 #586e75 */
+    --ring: 205 69% 49%;               /* Blue #268bd2 */
 
     --radius: 0.75rem;
 
