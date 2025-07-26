@@ -96,28 +96,38 @@ class AudioSystem {
   private startBackgroundMusic() {
     if (!this.audioContext || this.isMuted) return;
 
-    // Create a simple procedural background loop
+    // Create a fast-paced procedural background loop for maximum adrenaline
     const playMusicLoop = () => {
       if (this.isMuted || !this.audioContext) return;
 
-      // Chord progression for retro arcade feel
+      // Faster chord progression with more energy
       const chords = [
         [261.63, 329.63, 392.00], // C major
         [246.94, 311.13, 369.99], // B minor  
         [220.00, 277.18, 329.63], // A minor
         [196.00, 246.94, 293.66], // G major
+        [293.66, 369.99, 440.00], // D major (added for more progression)
+        [246.94, 311.13, 369.99], // B minor (repeat for tension)
       ];
 
       chords.forEach((chord, index) => {
         setTimeout(() => {
           chord.forEach(freq => {
-            this.createTone(freq, 1.5, 0.03, 'triangle');
+            // Shorter, punchier chords with slight volume variation for rhythm
+            this.createTone(freq, 0.4, 0.04 + (index % 2) * 0.01, 'triangle');
+            // Add a bass note for more drive
+            this.createTone(freq / 2, 0.3, 0.02, 'sawtooth');
           });
-        }, index * 2000);
+          
+          // Add rhythmic high-hat style percussion
+          setTimeout(() => {
+            this.createTone(2000 + Math.random() * 500, 0.05, 0.015, 'square');
+          }, 200);
+        }, index * 500); // Much faster: 0.5 seconds per chord instead of 2
       });
 
-      // Loop every 8 seconds
-      setTimeout(playMusicLoop, 8000);
+      // Loop every 3 seconds instead of 8 for constant energy
+      setTimeout(playMusicLoop, 3000);
     };
 
     playMusicLoop();
